@@ -1,0 +1,14 @@
+{
+  "name": "auto-blog-generator",
+  "version": "1.0.0",
+  "description": "AliExpress Affiliate Product Post Generator using Gemini API",
+  "main": "scripts/generate-posts.js",
+  "scripts": {
+    "start": "node scripts/generate-posts.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.11.0",
+    "axios": "^1.6.8",
+    "dotenv": "^16.4.5"
+  }
+}
