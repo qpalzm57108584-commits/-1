@@ -1,0 +1,64 @@
+name: Auto Blog Generation
+
+on:
+  schedule:
+    # 매일 한국 시간(KST) 새벽 3시 실행 (UTC 18:00)
+    - cron: '0 18 * * *'
+  workflow_dispatch: # 깃허브 웹 UI에서 수동으로 실행 가능하도록 설정
+
+permissions:
+  contents: write # 레포지토리에 변경 사항을 커밋하고 푸시할 수 있도록 쓰기 권한 부여
+
+jobs:
+  generate-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 저장소 코드 가져오기
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Node.js 환경 설정
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm' # npm 패키지 캐싱으로 빌드 속도 향상 (package-lock.json 필요)
+
+      # 3. 의존성 패키지 설치
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          elif [ -f package.json ]; then
+            npm install
+          else
+            echo "No package.json found. Skipping npm install."
+          fi
+
+      # 4. 블로그 포스트 생성 스크립트 실행
+      - name: Run post generation script
+        run: node scripts/generate-posts.js
+        env:
+          # 스크립트 실행에 필요한 환경 변수들을 설정합니다.
+          # 깃허브 레포지토리 Settings > Secrets and variables > Actions에 등록된 값을 가져옵니다.
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # 필요 시 아래 주석을 해제하고 추가 환경 변수를 설정하세요.
+          # ALIEXPRESS_API_KEY: ${{ secrets.ALIEXPRESS_API_KEY }}
+          # ALIEXPRESS_SECRET_KEY: ${{ secrets.ALIEXPRESS_SECRET_KEY }}
+
+      # 5. 변경된 마크다운 파일을 Git에 커밋 및 푸시
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # 변경되거나 새로 추가된 파일이 있는지 확인
+          git add .
+          
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "chore: auto-generate blog posts [skip ci]"
+            git push origin main
+          else
+            echo "No changes detected. Skipping commit and push."
+          fi
